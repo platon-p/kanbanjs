@@ -6,33 +6,12 @@
 
   <body>
     <h3>Kanban.js</h3>
-    <section style="margin-bottom: 20px">
-      <input type="text" id="columnNameInput" placeholder="column name" />
-      <button id="addColumnButton">add column</button>
-      <button id="loadButton">load</button>
-      <button id="saveButton">save</button>
-    </section>
     <div id="root"></div>
     <script type="module" src="index.js"></script>
     <script type="module">
-      import { Kanban } from "./index.js";
+      import { appKanbanBoard } from "./index.js";
       const element = document.getElementById("root");
-      let board = new Kanban(element);
-
-      document
-        .getElementById("addColumnButton")
-        .addEventListener("click", () => {
-          const input = document.getElementById("columnNameInput");
-          const columnName = input.value;
-          board.addColumn(columnName);
-          input.value = "";
-        });
-      document.getElementById("loadButton").addEventListener("click", () => {
-        board.loadData();
-      });
-      document.getElementById("saveButton").addEventListener("click", () => {
-        board.saveData();
-      });
+      let board = appKanbanBoard(element);
     </script>
   </body>
 </html>

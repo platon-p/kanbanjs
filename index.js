@@ -20,7 +20,7 @@ let boardContext = {
 
   mouseDownCol(e, col) {
     // ignore right click
-    if (e.which === 3) return;
+    if (e.button !== 0) return;
     this.movingColumn = col;
     this.dx = e.offsetX;
     this.dy = e.offsetY;
@@ -30,13 +30,14 @@ let boardContext = {
   },
 
   mouseUpCol(e, col) {
+    if (!this.movingColumn) return;
     const { columns } = this.board;
     columns.splice(columns.indexOf(col), 1);
     let idx = columns.findIndex(
       (col) => col.element === this.placeholder.nextElementSibling
     );
     if (idx === -1) {
-      idx = columns.length - 1;
+      idx = columns.length;
     }
     columns.splice(idx, 0, col);
 
@@ -50,8 +51,7 @@ let boardContext = {
 
   mouseDownCard(e, card) {
     // ignore right click
-    if (e.which === 3) {
-      e.preventDefault();
+    if (e.button !== 0) {
       return;
     }
     this.movingCard = card;
@@ -63,6 +63,7 @@ let boardContext = {
   },
 
   mouseUpCard(e, card) {
+    if (!this.movingCard) return;
     // 1. remove from origin
     let originCol = this.board.columns.find((col) => col.cards.includes(card));
     originCol.cards.splice(originCol.cards.indexOf(card), 1);
@@ -112,37 +113,6 @@ function getHoverKindY(elem, y, delta = 2 / 4) {
 }
 
 export class Kanban {
-  addColumn(name) {
-    const col = new Column(name);
-    this.columns.push(col);
-    this.root.appendChild(col.element);
-    col.titleElement.addEventListener("mousedown", (e) =>
-      boardContext.mouseDownCol(e, col)
-    );
-    col.titleElement.addEventListener("mouseup", (e) =>
-      boardContext.mouseUpCol(e, col)
-    );
-  }
-
-  loadData() {
-    let data = localStorage.getItem("kanban");
-    if (!data) return;
-    data = JSON.parse(data);
-    this.init(this.parent, data);
-  }
-
-  saveData() {
-    let res = this.columns.map((col) => {
-      return {
-        title: col.name,
-        cards: col.cards.map((card) => card.text),
-      };
-    });
-    res = JSON.stringify(res);
-    localStorage.setItem("kanban", res);
-    return res;
-  }
-
   constructor(element, data = []) {
     this.init(element, data);
   }
@@ -150,21 +120,55 @@ export class Kanban {
   init(element, data) {
     element.innerHTML = "";
     boardContext.board = this;
+    this.listeners?.forEach((listener) =>
+      document.removeEventListener(listener[0], listener[1])
+    );
+
     this.parent = element;
     this.root = document.createElement("div");
+
+    const initControlsSection = () => {
+      let controlsSection = document.createElement("section");
+      controlsSection.style.marginBottom = "20px";
+      const columnNameInput = document.createElement("input");
+      columnNameInput.type = "text";
+      columnNameInput.placeholder = "column name";
+      const addColumnButton = document.createElement("button");
+      addColumnButton.textContent = "add column";
+      addColumnButton.onclick = () => {
+        this.addColumn(columnNameInput.value);
+        columnNameInput.value = "";
+      }
+      const loadButton = document.createElement("button");
+      loadButton.textContent = "load";
+      loadButton.onclick = () => this.loadData();
+      const saveButton = document.createElement("button");
+      saveButton.textContent = "save";
+      saveButton.onclick = () => this.saveData();
+  
+      controlsSection.appendChild(columnNameInput);
+      controlsSection.appendChild(addColumnButton);
+      controlsSection.appendChild(loadButton);
+      controlsSection.appendChild(saveButton);
+      this.parent.appendChild(controlsSection);
+    }
+    initControlsSection();
+    
+
     this.root.classList.add("kanban");
     this.parent.appendChild(this.root);
     this.columns = [];
+    this.listeners = [];
 
-    data.forEach(col => {
+    data.forEach((col) => {
       this.addColumn(col.title);
-      col.cards.forEach(card => {
+      col.cards.forEach((card) => {
         this.columns[this.columns.length - 1].addCard(new Card(card));
       });
-    })
+    });
 
     // column mousemove
-    document.addEventListener("mousemove", (e) => {
+    let moveCol = (e) => {
       const { movingColumn, placeholder, dx, dy } = boardContext;
       if (!movingColumn) return;
       move(movingColumn.element, e.clientX - dx, e.clientY - dy);
@@ -191,10 +195,11 @@ export class Kanban {
       } else {
         this.columns[leftIndex].element.before(placeholder);
       }
-    });
+    };
+    document.addEventListener("mousemove", moveCol);
 
     // card mousemove
-    document.addEventListener("mousemove", (e) => {
+    let moveCard = (e) => {
       const { movingCard, placeholder, dx, dy } = boardContext;
       if (!movingCard) return;
       move(movingCard.element, e.clientX - dx, e.clientY - dy);
@@ -220,7 +225,71 @@ export class Kanban {
       } else {
         this.columns[nextCol].cards[nextCard].element.before(placeholder);
       }
+    };
+    document.addEventListener("mousemove", moveCard);
+
+    // delete on middleclick
+    let middleClickRemove = (e) => {
+      // middle click = delete column / card
+      if (e.button !== 1) {
+        return;
+      }
+      let nodeUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+      if (nodeUnderCursor.classList.contains("title")) {
+        let colElem = nodeUnderCursor.parentNode;
+        let col = this.columns.find((col) => col.element === colElem);
+        this.removeColumn(col);
+      } else if (nodeUnderCursor.classList.contains("card")) {
+        let colElem = nodeUnderCursor.parentNode.parentNode;
+        let col = this.columns.find((col) => col.element === colElem);
+        let card = col.cards.find((card) => card.element === nodeUnderCursor);
+        col.removeCard(card);
+      }
+    };
+    document.addEventListener("mousedown", middleClickRemove);
+
+    this.listeners.push(
+      ["mousemove", moveCol],
+      ["mousemove", moveCard],
+      ["mousedown", middleClickRemove]
+    );
+  }
+
+  addColumn(name) {
+    const col = new Column(name);
+    this.columns.push(col);
+    this.root.appendChild(col.element);
+    col.titleElement.addEventListener("mousedown", (e) =>
+      boardContext.mouseDownCol(e, col)
+    );
+    col.titleElement.addEventListener("mouseup", (e) =>
+      boardContext.mouseUpCol(e, col)
+    );
+  }
+
+  removeColumn(col) {
+    this.columns.splice(this.columns.indexOf(col), 1);
+    col.element.remove();
+  }
+
+  loadData() {
+    let data = localStorage.getItem("kanban");
+    if (!data) return;
+    data = JSON.parse(data);
+    this.init(this.parent, data);
+  }
+
+  saveData() {
+    console.log(this.columns);
+    let res = this.columns.map((col) => {
+      return {
+        title: col.name,
+        cards: col.cards.map((card) => card.text),
+      };
     });
+    res = JSON.stringify(res);
+    localStorage.setItem("kanban", res);
+    return res;
   }
 }
 
@@ -261,6 +330,11 @@ class Column {
     this.cards.push(card);
     this.cardsElement.appendChild(card.element);
   }
+
+  removeCard(card) {
+    this.cards.splice(this.cards.indexOf(card), 1);
+    card.element.remove();
+  }
 }
 
 class Card {
@@ -270,14 +344,11 @@ class Card {
     this.element.classList.add("card");
     this.element.textContent = text;
 
-    this.element.addEventListener("mousedown", (e) =>
-      boardContext.mouseDownCard(e, this)
-    );
-    this.element.addEventListener("mouseup", (e) =>
-      boardContext.mouseUpCard(e, this)
-    );
-    this.element.addEventListener("click", (e) => {
-      console.log("click", e);
-    });
+    this.element.onmousedown = (e) => boardContext.mouseDownCard(e, this);
+    this.element.onmouseup = (e) => boardContext.mouseUpCard(e, this);
   }
+}
+
+export function appKanbanBoard(element, data) {
+  return new Kanban(element, data || []);
 }
