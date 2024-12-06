@@ -1,25 +1,100 @@
-let movingColumn;
-let placeholder;
-let dx, dy;
+let boardContext = {
+  movingColumn: null,
+  movingCard: null,
+  placeholder: null,
+  dx: 0,
+  dy: 0,
+  board: null,
 
-function createPlaceholder() {
-  placeholder = document.createElement("div");
-  placeholder.classList.add("placeholder");
-  movingColumn.element.parentNode.insertBefore(placeholder, movingColumn.element);
-}
+  createPlaceholder(elem, classname) {
+    this.placeholder = document.createElement("div");
+    this.placeholder.classList.add(classname);
+    elem.parentNode.insertBefore(this.placeholder, elem);
+  },
 
-function removePlaceholder() {
-  if (placeholder) {
-    placeholder.parentNode.removeChild(placeholder);
-  }
-}
+  removePlaceholder() {
+    if (this.placeholder) {
+      this.placeholder.parentNode.removeChild(this.placeholder);
+    }
+  },
+
+  mouseDownCol(e, col) {
+    // ignore right click
+    if (e.which === 3) return;
+    this.movingColumn = col;
+    this.dx = e.offsetX;
+    this.dy = e.offsetY;
+    col.element.classList.add("moving");
+    move(col.element, e.clientX - this.dx, e.clientY - this.dy);
+    this.createPlaceholder(this.movingColumn.element, "placeholder");
+  },
+
+  mouseUpCol(e, col) {
+    const { columns } = this.board;
+    columns.splice(columns.indexOf(col), 1);
+    let idx = columns.findIndex(
+      (col) => col.element === this.placeholder.nextElementSibling
+    );
+    if (idx === -1) {
+      idx = columns.length - 1;
+    }
+    columns.splice(idx, 0, col);
+
+    this.placeholder.parentNode.insertBefore(col.element, this.placeholder);
+    this.removePlaceholder();
+    col.element.classList.remove("moving");
+    col.element.style.removeProperty("left");
+    col.element.style.removeProperty("top");
+    this.movingColumn = null;
+  },
+
+  mouseDownCard(e, card) {
+    // ignore right click
+    if (e.which === 3) {
+      e.preventDefault();
+      return;
+    }
+    this.movingCard = card;
+    this.dx = e.offsetX;
+    this.dy = e.offsetY;
+    card.element.classList.add("moving");
+    move(card.element, e.clientX - this.dx, e.clientY - this.dy);
+    this.createPlaceholder(card.element, "placeholder");
+  },
+
+  mouseUpCard(e, card) {
+    // 1. remove from origin
+    let originCol = this.board.columns.find((col) => col.cards.includes(card));
+    originCol.cards.splice(originCol.cards.indexOf(card), 1);
+
+    // 2. insert instead of placeholder
+    let col = this.board.columns.find(
+      (col) => col.cardsElement === this.placeholder.parentNode
+    );
+    const nextToPlaceholder = col.cards.findIndex(
+      (card) => card.element === this.placeholder.nextElementSibling
+    );
+    if (nextToPlaceholder === -1) {
+      col.addCard(card);
+    } else {
+      col.cards.splice(nextToPlaceholder, 0, card);
+      col.cardsElement.insertBefore(card.element, this.placeholder);
+    }
+
+    this.movingCard.element.classList.remove("moving");
+    this.movingCard.element.style.removeProperty("left");
+    this.movingCard.element.style.removeProperty("top");
+    this.movingCard = null;
+    this.removePlaceholder();
+  },
+};
 
 function move(element, x, y) {
   element.style.left = x + "px";
   element.style.top = y + "px";
 }
 
-function getHoverKind(elem, x, delta = 3/4) {
+function getHoverKindX(elem, x, delta = 3 / 4) {
   // return left if x in 3/4 of the element or less
   const rect = elem.getBoundingClientRect();
   if (x < rect.left + rect.width * delta) {
@@ -28,36 +103,25 @@ function getHoverKind(elem, x, delta = 3/4) {
   return "right";
 }
 
+function getHoverKindY(elem, y, delta = 2 / 4) {
+  const rect = elem.getBoundingClientRect();
+  if (y < rect.top + rect.height * delta) {
+    return "top";
+  }
+  return "bottom";
+}
+
 export class Kanban {
   addColumn(name) {
     const col = new Column(name);
     this.columns.push(col);
     this.root.appendChild(col.element);
-    col.titleElement.addEventListener("mousedown", (e) => {
-      dx = e.offsetX, dy = e.offsetY;
-      
-      movingColumn = col;
-      col.element.classList.add("moving");
-      move(col.element, e.clientX - dx, e.clientY - dy);
-      createPlaceholder();
-    });
-    col.titleElement.addEventListener("mouseup", (e) => {
-      this.columns.splice(this.columns.indexOf(col), 1);
-      let idx = this.columns.findIndex(col => col.element === placeholder.nextElementSibling);
-      if (idx === -1) {
-        idx = this.columns.length - 1;
-      }
-      this.columns.splice(idx, 0, col);
-      console.log(this.columns.map(col => col.name));
-
-
-      placeholder.parentNode.insertBefore(col.element, placeholder);
-      removePlaceholder();
-      col.element.classList.remove("moving");
-      col.element.style.removeProperty("left");
-      col.element.style.removeProperty("top");
-      movingColumn = null;
-    });
+    col.titleElement.addEventListener("mousedown", (e) =>
+      boardContext.mouseDownCol(e, col)
+    );
+    col.titleElement.addEventListener("mouseup", (e) =>
+      boardContext.mouseUpCol(e, col)
+    );
   }
 
   loadData() {
@@ -69,54 +133,104 @@ export class Kanban {
   }
 
   constructor(element) {
+    boardContext.board = this;
     this.parent = element;
     this.root = document.createElement("div");
     this.root.classList.add("kanban");
     this.parent.appendChild(this.root);
     this.columns = [];
 
+    // column mousemove
     document.addEventListener("mousemove", (e) => {
+      const { movingColumn, placeholder, dx, dy } = boardContext;
       if (!movingColumn) return;
       move(movingColumn.element, e.clientX - dx, e.clientY - dy);
-      const isInPlaceholder = placeholder.getBoundingClientRect().left < e.clientX && e.clientX < placeholder.getBoundingClientRect().right;
-      if (isInPlaceholder && getHoverKind(placeholder, e.clientX, 3/4) === "right") {
+      const isInPlaceholder =
+        placeholder.getBoundingClientRect().left < e.clientX &&
+        e.clientX < placeholder.getBoundingClientRect().right;
+      if (
+        isInPlaceholder &&
+        getHoverKindX(placeholder, e.clientX, 3 / 4) === "right"
+      ) {
         const next = placeholder.nextElementSibling;
         if (next) {
           placeholder.before(next);
         }
         return;
       }
-      const arrangement = this.columns.map(col => col !== movingColumn && getHoverKind(col.element, e.clientX));
+      const arrangement = this.columns.map(
+        (col) => col !== movingColumn && getHoverKindX(col.element, e.clientX)
+      );
       // find first left
       const leftIndex = arrangement.indexOf("left");
       if (leftIndex === -1) {
         this.root.appendChild(placeholder);
       } else {
         this.columns[leftIndex].element.before(placeholder);
-      }      
+      }
+    });
+
+    // card mousemove
+    document.addEventListener("mousemove", (e) => {
+      const { movingCard, placeholder, dx, dy } = boardContext;
+      if (!movingCard) return;
+      move(movingCard.element, e.clientX - dx, e.clientY - dy);
+      let nextCol = this.columns
+        .map(
+          (col) => col !== movingCard && getHoverKindX(col.element, e.clientX, 4/5)
+        )
+        .findIndex((kind) => kind === "left");
+      if (nextCol === -1) {
+        nextCol = this.columns.length - 1;
+      }
+      this.columns[nextCol].cardsElement.appendChild(placeholder);
+
+      let nextCard = this.columns[nextCol].cards
+        .map(
+          (card) =>
+            card !== movingCard && getHoverKindY(card.element, e.clientY)
+        )
+        .findIndex((kind) => kind === "top");
+      if (nextCard === -1) {
+        this.columns[nextCol].cardsElement.appendChild(placeholder);
+      } else {
+        this.columns[nextCol].cards[nextCard].element.before(placeholder);
+      }
     });
   }
 }
 
 class Column {
   constructor(name) {
+    this.cards = [];
     this.name = name;
+
     this.element = document.createElement("div");
     this.element.classList.add("column");
+
     this.titleElement = document.createElement("div");
     this.titleElement.classList.add("title");
     this.titleElement.textContent = name;
     this.element.appendChild(this.titleElement);
 
-    this.cards = [];
-    this.addCard("text1");
-    this.addCard("text2");
+    this.cardsElement = document.createElement("div");
+    this.cardsElement.classList.add("cards");
+    this.element.appendChild(this.cardsElement);
+
+    this.createCardButton = document.createElement("button");
+    this.createCardButton.textContent = "Create";
+    this.createCardButton.addEventListener("click", () => {
+      this.addCard(new Card("new card"));
+    });
+    this.element.appendChild(this.createCardButton);
+
+    this.addCard(new Card(`${name} card1`));
+    this.addCard(new Card(`${name} card2`));
   }
 
-  addCard(text) {
-    const card = new Card(text);
+  addCard(card) {
     this.cards.push(card);
-    this.element.appendChild(card.element);
+    this.cardsElement.appendChild(card.element);
   }
 }
 
@@ -126,5 +240,15 @@ class Card {
     this.element = document.createElement("div");
     this.element.classList.add("card");
     this.element.textContent = text;
+
+    this.element.addEventListener("mousedown", (e) =>
+      boardContext.mouseDownCard(e, this)
+    );
+    this.element.addEventListener("mouseup", (e) =>
+      boardContext.mouseUpCard(e, this)
+    );
+    this.element.addEventListener("click", e => {
+      console.log('click', e)
+    })
   }
 }

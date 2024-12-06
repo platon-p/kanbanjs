@@ -8,6 +8,8 @@
   width: 150px;
   background-color: wheat;
   min-height: 100px;
+  height: fit-content;
+  border-radius: 5px;
 }
 
 .moving {
@@ -21,6 +23,11 @@
   min-height: 50px;
 }
 
+.column button {
+  display: inline-block;
+  width: 100%;
+}
+
 .title {
   text-align: center;
   border-bottom: 1px solid black;
@@ -28,9 +35,19 @@
   cursor: grab;
 }
 
+.cards {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0px;
+}
+
 .card {
+  width: 120px;
   background-color: lightblue;
   padding: 8px;
-  margin: 8px;
   cursor: grab;
+  border: 1px solid gray;
+  border-radius: 5px;
 }
