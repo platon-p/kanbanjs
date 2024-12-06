@@ -12,11 +12,6 @@
   border-radius: 5px;
 }
 
-.moving {
-  position: absolute;
-  transform: rotate(3deg);
-}
-
 .placeholder {
   width: 150px;
   background-color: lightgray;
@@ -50,4 +45,27 @@
   cursor: grab;
   border: 1px solid gray;
   border-radius: 5px;
+}
+
+.moving {
+  position: absolute;
+  transform: rotate(3deg);
+}
+
+.card.moving, .moving .title {
+  cursor: grabbing;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+
+.controls button {
+  width: 100%;
+}
+.controls textarea {
+  resize: vertical;
 }

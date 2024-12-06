@@ -217,12 +217,20 @@ class Column {
     this.cardsElement.classList.add("cards");
     this.element.appendChild(this.cardsElement);
 
-    this.createCardButton = document.createElement("button");
-    this.createCardButton.textContent = "Create";
-    this.createCardButton.addEventListener("click", () => {
-      this.addCard(new Card("new card"));
+    const controls = document.createElement("div");
+    controls.classList.add("controls");
+    const createCardButton = document.createElement("button");
+    createCardButton.textContent = "Create";
+    const createCardTextArea = document.createElement("textarea");
+    controls.appendChild(createCardTextArea);
+    controls.appendChild(createCardButton);
+
+    createCardButton.addEventListener("click", () => {
+      let text = createCardTextArea.value;
+      this.addCard(new Card(text));
+      createCardTextArea.value = "";
     });
-    this.element.appendChild(this.createCardButton);
+    this.element.appendChild(controls);
 
     this.addCard(new Card(`${name} card1`));
     this.addCard(new Card(`${name} card2`));
