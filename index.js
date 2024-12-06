@@ -255,9 +255,6 @@ class Column {
       createCardTextArea.value = "";
     });
     this.element.appendChild(controls);
-
-    this.addCard(new Card(`${name} card1`));
-    this.addCard(new Card(`${name} card2`));
   }
 
   addCard(card) {
