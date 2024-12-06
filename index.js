@@ -125,20 +125,43 @@ export class Kanban {
   }
 
   loadData() {
-    // todo: parse from local storage
+    let data = localStorage.getItem("kanban");
+    if (!data) return;
+    data = JSON.parse(data);
+    this.init(this.parent, data);
   }
 
   saveData() {
-    // todo: save to local storage
+    let res = this.columns.map((col) => {
+      return {
+        title: col.name,
+        cards: col.cards.map((card) => card.text),
+      };
+    });
+    res = JSON.stringify(res);
+    localStorage.setItem("kanban", res);
+    return res;
   }
 
-  constructor(element) {
+  constructor(element, data = []) {
+    this.init(element, data);
+  }
+
+  init(element, data) {
+    element.innerHTML = "";
     boardContext.board = this;
     this.parent = element;
     this.root = document.createElement("div");
     this.root.classList.add("kanban");
     this.parent.appendChild(this.root);
     this.columns = [];
+
+    data.forEach(col => {
+      this.addColumn(col.title);
+      col.cards.forEach(card => {
+        this.columns[this.columns.length - 1].addCard(new Card(card));
+      });
+    })
 
     // column mousemove
     document.addEventListener("mousemove", (e) => {
@@ -177,7 +200,8 @@ export class Kanban {
       move(movingCard.element, e.clientX - dx, e.clientY - dy);
       let nextCol = this.columns
         .map(
-          (col) => col !== movingCard && getHoverKindX(col.element, e.clientX, 4/5)
+          (col) =>
+            col !== movingCard && getHoverKindX(col.element, e.clientX, 4 / 5)
         )
         .findIndex((kind) => kind === "left");
       if (nextCol === -1) {
@@ -255,8 +279,8 @@ class Card {
     this.element.addEventListener("mouseup", (e) =>
       boardContext.mouseUpCard(e, this)
     );
-    this.element.addEventListener("click", e => {
-      console.log('click', e)
-    })
+    this.element.addEventListener("click", (e) => {
+      console.log("click", e);
+    });
   }
 }

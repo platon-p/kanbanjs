@@ -9,6 +9,8 @@
     <section style="margin-bottom: 20px">
       <input type="text" id="columnNameInput" placeholder="column name" />
       <button id="addColumnButton">add column</button>
+      <button id="loadButton">load</button>
+      <button id="saveButton">save</button>
     </section>
     <div id="root"></div>
     <script type="module" src="index.js"></script>
@@ -16,9 +18,6 @@
       import { Kanban } from "./index.js";
       const element = document.getElementById("root");
       let board = new Kanban(element);
-      board.addColumn("column1");
-      board.addColumn("column2");
-      board.addColumn("column3");
 
       document
         .getElementById("addColumnButton")
@@ -28,6 +27,12 @@
           board.addColumn(columnName);
           input.value = "";
         });
+      document.getElementById("loadButton").addEventListener("click", () => {
+        board.loadData();
+      });
+      document.getElementById("saveButton").addEventListener("click", () => {
+        board.saveData();
+      });
     </script>
   </body>
 </html>
