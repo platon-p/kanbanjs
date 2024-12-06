@@ -1,0 +1,29 @@
+.kanban {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.column {
+  width: 150px;
+  background-color: wheat;
+  min-height: 100px;
+  cursor: grab;
+}
+
+.moving {
+  position: absolute;
+  transform: rotate(3deg);
+  cursor: grabbing;
+}
+
+.placeholder {
+  width: 150px;
+  background-color: lightgray;
+  min-height: 50px;
+}
+/* set column title as before content */
+
+.column::before {
+  content: attr(data-name);
+}
