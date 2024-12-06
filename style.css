@@ -8,13 +8,11 @@
   width: 150px;
   background-color: wheat;
   min-height: 100px;
-  cursor: grab;
 }
 
 .moving {
   position: absolute;
   transform: rotate(3deg);
-  cursor: grabbing;
 }
 
 .placeholder {
@@ -22,8 +20,17 @@
   background-color: lightgray;
   min-height: 50px;
 }
-/* set column title as before content */
 
-.column::before {
-  content: attr(data-name);
+.title {
+  text-align: center;
+  border-bottom: 1px solid black;
+  padding: 8px 0;
+  cursor: grab;
+}
+
+.card {
+  background-color: lightblue;
+  padding: 8px;
+  margin: 8px;
+  cursor: grab;
 }

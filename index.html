@@ -1,31 +1,33 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
   </head>
 
   <body>
     <h3>Kanban.js</h3>
-    <section style="margin-bottom: 20px;">
+    <section style="margin-bottom: 20px">
       <input type="text" id="columnNameInput" placeholder="column name" />
       <button id="addColumnButton">add column</button>
     </section>
     <div id="root"></div>
-  </body>
-  <script type="module" src="index.js"></script>
-  <script type="module">
-    import { Kanban } from "./index.js";
-    const element = document.getElementById("root");
-    let board = new Kanban(element);
-    board.addColumn("column1");
-    board.addColumn("column2");
-    board.addColumn("column3");
+    <script type="module" src="index.js"></script>
+    <script type="module">
+      import { Kanban } from "./index.js";
+      const element = document.getElementById("root");
+      let board = new Kanban(element);
+      board.addColumn("column1");
+      board.addColumn("column2");
+      board.addColumn("column3");
 
-    document.getElementById("addColumnButton").addEventListener("click", () => {
-      const input = document.getElementById("columnNameInput");
-      const columnName = input.value;
-      board.addColumn(columnName);
-      input.value = "";
-    });
-  </script>
+      document
+        .getElementById("addColumnButton")
+        .addEventListener("click", () => {
+          const input = document.getElementById("columnNameInput");
+          const columnName = input.value;
+          board.addColumn(columnName);
+          input.value = "";
+        });
+    </script>
+  </body>
 </html>
